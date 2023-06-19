@@ -1,34 +1,54 @@
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: documentation-template
-  title: Documentation Template
-  description: Create a new standalone documentation project
-  tags:
-    - recommended
-    - techdocs
-    - core
+  name: github-action-trigger-template
+  title: Github Action Trigger
+  description: An example template for the scaffolder that trigger a simple Github Action
 spec:
-  owner: az-soft-eng/backstage-maintainers
-  type: documentation
+  type: service
   system: internal-dev-portal
 
   parameters:
     - title: Fill in some steps
       required:
         - name
-        - description
+        - logLevel
+        - workflowId
+        - printTag
+        - tags
+        - owner
       properties:
         name:
           title: Name
           type: string
           description: Unique name of the component
-          ui:field: EntityNamePicker
           ui:autofocus: true
-        description:
-          title: Description
+          maxLength: 16
+          pattern: '^([a-zA-Z][a-zA-Z0-9]*)(-[a-zA-Z0-9]+)*$'
+        workflowId:
+          title: Workflow Id
           type: string
-          description: A description for the component
+          description: Id of Workflow
+          maxLength: 16
+          pattern: '^([a-zA-Z][a-zA-Z0-9]*)(-[a-zA-Z0-9]+)*.yml$'
+        logLevel:
+          title: Type
+          type: string
+          description: Type of the log level
+          enum:
+            - info
+            - warning
+            - debug
+          enumNames:
+            - info
+            - warning
+            - debug
+        printTag:
+          title: Print Tag
+          type: boolean
+        tags:
+          title: Tags
+          type: string
         owner:
           title: Owner
           type: string
@@ -48,44 +68,19 @@ spec:
           ui:options:
             allowedHosts:
               - github.com
-            allowedOwners:
-              - az-ai
-              - az-soft-eng
-              - az-data-eng
-              - AZ-AI-test
-              - az-scp
-              - RDIT-DPS
-              - AstraZeneca-CGR
 
-  # This template is meant to be used on top of an existing template.
-  # By adding the following and fetching from an absolute URL you can
-  # add in the docs template
   steps:
-    - id: fetch
-      name: Template Docs Skeleton
-      action: fetch:template
+    - action: github:actions:dispatch
+      id: trigger-build
+      name: Trigger Build
       input:
-        url: ./skeleton
-        values:
-          name: ${{ parameters.name }}
-          description: ${{ parameters.description }}
-          destination: ${{ parameters.repoUrl | parseRepoUrl }}
-          owner: ${{ parameters.owner }}
-
-    - id: publish
-      name: Publish
-      action: publish:github
-      input:
-        allowedHosts: ["github.com"]
-        description: This is ${{ parameters.name }}
         repoUrl: ${{ parameters.repoUrl }}
-
-    - id: register
-      name: Register
-      action: catalog:register
-      input:
-        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
-        catalogInfoPath: "/catalog-info.yaml"
+        workflowId: ${{ parameters.workflowId }}
+        branchOrTagName: 'main'
+        workflowInputs:
+          logLevel: ${{ parameters.logLevel }}
+          print_tags: ${{ parameters.printTag }}
+          tags: ${{ parameters.tags }}
 
   output:
     links:
