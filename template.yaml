@@ -1,91 +1,98 @@
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: github-action-trigger-template
-  title: Github Action Trigger
-  description: An example template for the scaffolder that trigger a simple Github Action
+  name: on-demand-env-github-action
+  title: On Demand Environment Github Action Template
+  description: An template for trigger a Github Action that create on demand environment
 spec:
   type: service
   system: internal-dev-portal
 
   parameters:
-    - title: Fill in some steps
+    - title: Fill The Steps
       required:
-        - name
-        - logLevel
-        - workflowId
-        - printTag
-        - tags
-        - owner
+        - environmentName
+        - environment
+        - eksVersion
+        - mongodbVersion
+
       properties:
-        name:
-          title: Name
+        environmentName:
+          title: Environment Name
           type: string
-          description: Unique name of the component
+          description: Name of environment
           ui:autofocus: true
-          maxLength: 16
-          pattern: '^([a-zA-Z][a-zA-Z0-9]*)(-[a-zA-Z0-9]+)*$'
-        workflowId:
-          title: Workflow Id
+          maxLength: 5
+          pattern: '^[a-z]{3}\d{2}$'
+        environment:
+          title: Environment
           type: string
-          description: Id of Workflow
-          maxLength: 16
-          pattern: '^([a-zA-Z][a-zA-Z0-9]*)(-[a-zA-Z0-9]+)*.yml$'
-        logLevel:
-          title: Type
-          type: string
-          description: Type of the log level
+          description: Environment
           enum:
-            - info
-            - warning
-            - debug
+            - 'snd'
+            - 'dev'
+        eksVersion:
+          title: EKS Version
+          type: string
+          description: Version of EKS
+          maxLength: 4
+          pattern: '^\d.\d{2}$'
+        mongodbVersion:
+          title: MongoDB Version
+          type: string
+          description: Version of MongoDB
+          maxLength: 3
+          pattern: '^\d.\d{1}$'
+        appVersion:
+          title: Application Version
+          type: string
+          description: Version of application
+          default: 'latest'
+          enum:
+            - 'boost-1.1'
+            - 'boost-1.2'
+            - 'latest'
           enumNames:
-            - info
-            - warning
-            - debug
-        printTag:
-          title: Print Tag
-          type: boolean
-        tags:
-          title: Tags
+            - Boost 1.1
+            - Boost 1.2
+            - Latest
+        ttl:
+          title: Time To Live
           type: string
-        owner:
-          title: Owner
-          type: string
-          description: Owner of the component
-          ui:field: OwnerPicker
-          ui:options:
-            allowedKinds:
-              - Group
-    - title: Choose a location
-      required:
-        - repoUrl
-      properties:
-        repoUrl:
-          title: Repository Location
-          type: string
-          ui:field: RepoUrlPicker
-          ui:options:
-            allowedHosts:
-              - github.com
+          default: '14'
+          enum:
+            - '7'
+            - '14'
+            - '28'
+            - '56'
+            - '70'
+          enumNames:
+            - 1 Week
+            - 2 Weeks
+            - 4 Weeks
+            - 8 Weeks
+            - 10 Weeks
 
   steps:
-    - action: github:actions:dispatch
-      id: trigger-build
-      name: Trigger Build
+    - id: http-request
+      action: http:backstage:request
+      name: Run Workflow
       input:
-        repoUrl: ${{ parameters.repoUrl }}
-        workflowId: ${{ parameters.workflowId }}
-        branchOrTagName: 'main'
-        workflowInputs:
-          logLevel: ${{ parameters.logLevel }}
-          print_tags: ${{ parameters.printTag }}
-          tags: ${{ parameters.tags }}
+        method: 'POST'
+        path: '/proxy/github/repos/RDIT-DPS/devops-tfc-pipelines/dispatches'
+        headers:
+          content-type: 'application/json'
+        body:
+          event_type: backstage
+          client_payload:
+            aws_env: ${{ parameters.environment }}
+            namespace: ${{ parameters.environmentName }}
+            eks_version: ${{ parameters.eksVersion }}
+            mongodb_version: ${{ parameters.mongodbVersion }}
+            app_version: ${{ parameters.appVersion }}
+            owner: ${{ user.entity.spec.profile.email }}
 
   output:
     links:
-      - title: Repository
-        url: ${{ steps.publish.output.remoteUrl }}
-      - title: Open in catalog
-        icon: catalog
-        entityRef: ${{ steps.register.output.entityRef }}
+      - title: README
+        url: https://github.com/RDIT-DPS
