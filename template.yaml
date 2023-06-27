@@ -7,6 +7,7 @@ metadata:
 spec:
   type: service
   system: internal-dev-portal
+  owner: user:ilkaykisayol
 
   parameters:
     - title: Fill The Steps
