@@ -1,12 +1,10 @@
-apiVersion: backstage.io/v1beta2
+apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
   name: backstage-example-template
 spec:
+  owner: user:guest
   type: service
-  lifecycle: production
-  system: internal-dev-portal
-  owner: user:default/ilkaykisayol
 
   parameters:
     - title: Fill The Steps
