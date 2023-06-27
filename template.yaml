@@ -1,58 +1,93 @@
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: ssss
-  title: ss
-  description: sss
+  name: az-webapi-template
+  title: C# WebApi Template
+  description: Well, no description
+  tags:
+    - template
+    - c#
+    - microservices
+    - webapi
 spec:
+  owner: az-soft-eng/backstage-maintainers
   type: service
-  system: internal-dev-portal
-
   parameters:
-    - title: Fill The Steps
+    - title: Choose a name
+      required:
+        - repoName
       properties:
-        owner:
+        repoName:
+          title: Repository name
           type: string
-          ui:field: OwnerPicker
-        appVersion:
-          title: Application Version
+          description: The name of the app that will be visible in Backstage
+          ui:field: EntityNamePicker
+          ui:autofocus: true 
+    - title: Choose a repository location
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
           type: string
-          description: Version of application
-          default: 'Boost 1.2'
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+            allowedOwners:
+              - az-soft-eng
+              - az-data-eng
+    - title: Choose repository owner
+      required:
+        - repoOwner
+      properties:
+        repoOwner:
+          title: Owner
+          type: string
+          description: Owner of the repo
+          default: az-soft-eng/backstage-maintainers
           enum:
-            - 'Boost 1.1'
-            - 'Boost 1.2'
-        ttl:
-          title: Time To Live
-          type: string
-          default: '2 weeks'
+            - az-soft-eng/backstage-maintainers
+    - title: Choose repository visibility
+      required:
+        - repoVisibility
+      properties:
+        repoVisibility:
+          title: Visibility
+          tpe: string
+          description: Visibility of the repo
+          default: internal
           enum:
-            - '1 week'
-            - '2 weeks'
-            - '4 weeks'
-            - '8 weeks'
-            - '10 weeks'
-          enumNames:
-            - 1 Week
-            - 2 Weeks
-            - 4 Weeks
-            - 8 Weeks
-            - 10 Weeks
-
+            - internal
+            - private
   steps:
-    - action: github:actions:dispatch
-      id: trigger-build
-      name: Trigger Build
+    - id: fetch-base
+      name: Fetch Base
+      action: fetch:template
       input:
-        repoUrl: 'github.com?repo=pocboost&owner=ilkaykisayol'
-        workflowId: 'pipeline_devops_env_request.yml'
-        branchOrTagName: 'main'
-        workflowInputs:
-          owner: ${{ parameters.owner }}
-          version: ${{ parameters.appVersion }}
-          retention: ${{ parameters.ttl }}
-
+        url: ./template
+        values:
+          name: ${{ parameters.repoName }}
+          owner: ${{ parameters.repoOwner }}
+          destination: ${{ parameters.repoUrl | parseRepoUrl }}
+    - id: publish
+      name: Publish
+      action: publish:github
+      input:
+        allowedHosts: ['github.com']
+        description: This is ${{ parameters.repoName }} from template
+        repoUrl: ${{ parameters.repoUrl }}
+        repoVisibility: ${{ parameters.repoVisibility }}
+    - id: register
+      name: Register
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
+        catalogInfoPath: '/catalog-info.yaml'
   output:
     links:
-      - title: README
-        url: https://github.com/RDIT-DPS/devops-platform-documentation/blob/feature-docs-security-lifecycle-management/docs/design/ondemand-environment-devops-engineer.md
+      - title: Repository
+        url: ${{ steps['publish'].output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}
