@@ -10,7 +10,7 @@ metadata:
     - microservices
     - webapi
 spec:
-  owner: az-soft-eng/backstage-maintainers
+  owner: default/engineering
   type: service
   parameters:
     - title: Choose a name
